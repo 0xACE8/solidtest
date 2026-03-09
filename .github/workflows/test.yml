@@ -158,16 +158,6 @@ jobs:
         keep_minimum_runs: 0
         delete_workflow_pattern: "imwrt 25.12ss kernel 6.12"
 
-    - name: Free Disk Space (ディスク空き容量の確保)
-      run: |
-        ${{ env.EXPAND_SPACE }}
-        sudo mkdir -p /build
-        sudo mount /dev/github/runner /build
-        sudo chown -R runner:runner /build
-        sudo ln -s /build $GITHUB_WORKSPACE/openwrt
-        df -Th
-        echo "status=success" >> ${GITHUB_OUTPUT}
-
     - name: Checkout Repo B (Data)
       uses: actions/checkout@main
       with:
@@ -177,15 +167,14 @@ jobs:
 
     - name: Set Variables
       run: |
-        ls
         # git repo patch
-        echo "SOURCE_PATCH=private_data/devices/virtual_machines_x64/repo/patch/immortalwrt-2512ss-patch.sh" >> $GITHUB_ENV
+        echo "SOURCE_PATCH=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/repo/patch/immortalwrt-2512ss-patch.sh" >> $GITHUB_ENV
         # device files
-        echo "DEVICE_PATCH=private_data/devices/virtual_machines_x64/patch/device_patch.sh" >> $GITHUB_ENV
-        echo "BUILD_CONFIG=private_data/devices/virtual_machines_x64/config/.config" >> $GITHUB_ENV
-        echo "BACKUP_FILES=private_data/devices/virtual_machines_x64/archive/immortalwrt-25.12/" >> $GITHUB_ENV
+        echo "DEVICE_PATCH=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/patch/device_patch.sh" >> $GITHUB_ENV
+        echo "BUILD_CONFIG=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/config/.config" >> $GITHUB_ENV
+        echo "BACKUP_FILES=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/archive/immortalwrt-25.12/" >> $GITHUB_ENV
         # cmcc color sytle for argon
-        echo "ARGON_COLORS=private_data/devices/virtual_machines_x64/theme/argon_theme.sh" >> $GITHUB_ENV
+        echo "ARGON_COLORS=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/theme/argon_theme.sh" >> $GITHUB_ENV
 
     - name: Initialization environment  (環境の初期化)
       id: init
@@ -214,3 +203,14 @@ jobs:
         echo "status=success" >> ${GITHUB_OUTPUT}
         git config --global url."https://$ACCESS_TOKEN@github.com/0xACE8/".insteadOf "https://github.com/0xACE8/"
         git config --global core.compression 0
+
+    - name: Free Disk Space (ディスク空き容量の確保)
+      run: |
+        ${{ env.EXPAND_SPACE }}
+        sudo mkdir -p /build
+        sudo mount /dev/github/runner /build
+        sudo chown -R runner:runner /build
+        sudo ln -s /build $GITHUB_WORKSPACE/openwrt
+        df -Th
+        echo "status=success" >> ${GITHUB_OUTPUT}
+        ls -al
