@@ -57,23 +57,23 @@ env:
   ## solidwrt core
   PRIVATE_DATA:         ${{ secrets.SOLIDWRT_CORE }}
   ## github ci
-  PLUGINS_2512:         ${{ secrets.PLUGINS_2512_ACE }}
-  PLUGINS_2410:         ${{ secrets.PLUGINS_2410_ACE }}
-  CHECK_SERVER:         ${{ secrets.TEST_SERVER_PERF }}
-  INIT_ENV_VAR:         ${{ secrets.INIT_ENVIRONMENT }}
-  EXPAND_SPACE:         ${{ github.workspace }}/${{ secrets.FREE_DISKS_SPACE }}
-  CLONE_IM2512:         ${{ github.workspace }}/${{ secrets.CLONE_IM2512_SRC }}
-  CLONE_IM2410:         ${{ github.workspace }}/${{ secrets.CLONE_IM2512_SRC }}
-  PATCH_IM2512:         ${{ github.workspace }}/${{ secrets.SRC_PATCH_IM2512 }}
-  PATCH_IM2410:         ${{ github.workspace }}/${{ secrets.SRC_PATCH_IM2410 }}
-  FEEDS_OP2512:         ${{ github.workspace }}/${{ secrets.ADD_FEEDS_OP2512 }}
-  FEEDS_OP2410:         ${{ github.workspace }}/${{ secrets.ADD_FEEDS_OP2410 }}
-  DEVICE_PATCH:         ${{ github.workspace }}/${{ secrets.DEVICE_DIFFPATCH }}
-  BUILD_CONFIG:         ${{ github.workspace }}/${{ secrets.BUILD_DIFFCONFIG }}
-  BACKUP_FILES:         ${{ github.workspace }}/${{ secrets.BACKUP_CONFIGURE }}
-  ARGON_COLORS:         ${{ github.workspace }}/${{ secrets.ARGON_THEMECOLOR }}
-  CHECK_SHA512:         ${{ github.workspace }}/${{ secrets.CHECK_SHA512SUMS }}
-  REPACK_IMAGE:         ${{ github.workspace }}/${{ secrets.REPACKAGE_IMAGES }}
+  PLUGINS_2512:         ${{ github.workflow }}/${{ secrets.PLUGINS_2512_ACE }}
+  PLUGINS_2410:         ${{ github.workflow }}/${{ secrets.PLUGINS_2410_ACE }}
+  CHECK_SERVER:         ${{ github.workflow }}/${{ secrets.TEST_SERVER_PERF }}
+  INIT_ENV_VAR:         ${{ github.workflow }}/${{ secrets.INIT_ENVIRONMENT }}
+  EXPAND_SPACE:         ${{ github.workflow }}/${{ secrets.FREE_DISKS_SPACE }}
+  CLONE_IM2512:         ${{ github.workflow }}/${{ secrets.CLONE_IM2512_SRC }}
+  CLONE_IM2410:         ${{ github.workflow }}/${{ secrets.CLONE_IM2512_SRC }}
+  PATCH_IM2512:         ${{ github.workflow }}/${{ secrets.SRC_PATCH_IM2512 }}
+  PATCH_IM2410:         ${{ github.workflow }}/${{ secrets.SRC_PATCH_IM2410 }}
+  FEEDS_OP2512:         ${{ github.workflow }}/${{ secrets.ADD_FEEDS_OP2512 }}
+  FEEDS_OP2410:         ${{ github.workflow }}/${{ secrets.ADD_FEEDS_OP2410 }}
+  DEVICE_PATCH:         ${{ github.workflow }}/${{ secrets.DEVICE_DIFFPATCH }}
+  BUILD_CONFIG:         ${{ github.workflow }}/${{ secrets.BUILD_DIFFCONFIG }}
+  BACKUP_FILES:         ${{ github.workflow }}/${{ secrets.BACKUP_CONFIGURE }}
+  ARGON_COLORS:         ${{ github.workflow }}/${{ secrets.ARGON_THEMECOLOR }}
+  CHECK_SHA512:         ${{ github.workflow }}/${{ secrets.CHECK_SHA512SUMS }}
+  REPACK_IMAGE:         ${{ github.workflow }}/${{ secrets.REPACKAGE_IMAGES }}
   ## telegram bot
   TGRAM_BOTKEY:         ${{ secrets.TELEGRAM_BOT_KEY }}
   TGRAM_CHATID:         ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -127,6 +127,7 @@ jobs:
     - name: Check Server Performance (サーバー性能の確認)
       id: check_env
       run: |
+        find ${{ github.workspace }}/private_data -name "*.sh" -exec chmod +x {} +
         ${{ env.CHECK_SERVER }}
 
     - name: Sync and Wait for Plugin Repo (プラグインリポジトリの同期と待機)
@@ -165,6 +166,7 @@ jobs:
       id: loadconfig
       run: |
         cp -rf ${{ env.BUILD_CONFIG }} .config
+        ls -al
         ${{ env.PATCH_IM2512 }}
         ${{ env.ARGON_COLORS }}
 
