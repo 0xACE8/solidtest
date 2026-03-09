@@ -47,29 +47,38 @@ on:
     - cron: '0 0 1 * *'
     
 env:
-  # git repo url
-  GIT_REPO_URL:         ${{ secrets.IMMORTALWRT_SOURCE_LINK }}
-  GIT_TREE_REF:         ${{ secrets.IMMORTALWRT_SOURCE_TREE }}
-  GIT_HEAD_REF:         ${{ secrets.IMMORTALWRT_2512SS_HEAD }}
-  PRIVATE_DATA:         ${{ secrets.SOLIDWRT_DATA }}
-  # github token
+  ## github token
   GITHUB_TOKEN:         ${{ secrets.ACCESS_TOKEN }}
   ACCESS_TOKEN:         ${{ secrets.ACCESS_TOKEN }}
-  # free disk space
-  # EXPAND_SPACE:         ${{ secrets.FREE_DISKS_SPACE }}
-  # feeds source & check sha512sum
-  FEEDS_SOURCE:         ${{ secrets.ADD_FEEDS_OP2512 }}
-  CHECK_SHA512:         ${{ secrets.CHECK_SHA512SUMS }}
-  REPACK_IMAGE:         ${{ secrets.REPACKAGE_IMAGES }}
-  # luci & packages repo
-  PLUGINS_REPO:         ${{ secrets.PLUGINS_REPO_ACE }}
-  PLUGINS_HEAD:         ${{ secrets.PLUGINS_2512_ACE }}
-  PLUGINS_SYNC:         ${{ secrets.PLUGINS_SYNC_ACE }}
-  # telegram bot
+  RUN_WORKFLOW:         ${{ github.workflow }}
+  RUN_REF_NAME:         ${{ github.ref_name }}
+  RUN_REF_REPO:         ${{ github.repository }}
+  RUNID_NUMBER:         ${{ github.run_id }}
+  ## solidwrt core
+  PRIVATE_DATA:         ${{ secrets.SOLIDWRT_CORE }}
+  ## github ci
+  PLUGINS_2512:         ${{ github.workflow }}/${{ secrets.PLUGINS_2512_ACE }}
+  PLUGINS_2410:         ${{ github.workflow }}/${{ secrets.PLUGINS_2410_ACE }}
+  CHECK_SERVER:         ${{ github.workflow }}/${{ secrets.TEST_SERVER_PERF }}
+  INIT_ENV_VAR:         ${{ github.workflow }}/${{ secrets.INIT_ENVIRONMENT }}
+  EXPAND_SPACE:         ${{ github.workflow }}/${{ secrets.FREE_DISKS_SPACE }}
+  CLONE_IM2512:         ${{ github.workflow }}/${{ secrets.CLONE_IM2512_SRC }}
+  CLONE_IM2410:         ${{ github.workflow }}/${{ secrets.CLONE_IM2512_SRC }}
+  PATCH_IM2512:         ${{ github.workflow }}/${{ secrets.SRC_PATCH_IM2512 }}
+  PATCH_IM2410:         ${{ github.workflow }}/${{ secrets.SRC_PATCH_IM2410 }}
+  FEEDS_OP2512:         ${{ github.workflow }}/${{ secrets.ADD_FEEDS_OP2512 }}
+  FEEDS_OP2410:         ${{ github.workflow }}/${{ secrets.ADD_FEEDS_OP2410 }}
+  DEVICE_PATCH:         ${{ github.workflow }}/${{ secrets.DEVICE_DIFFPATCH }}
+  BUILD_CONFIG:         ${{ github.workflow }}/${{ secrets.BUILD_DIFFCONFIG }}
+  BACKUP_FILES:         ${{ github.workflow }}/${{ secrets.BACKUP_CONFIGURE }}
+  ARGON_COLORS:         ${{ github.workflow }}/${{ secrets.ARGON_THEMECOLOR }}
+  CHECK_SHA512:         ${{ github.workflow }}/${{ secrets.CHECK_SHA512SUMS }}
+  REPACK_IMAGE:         ${{ github.workflow }}/${{ secrets.REPACKAGE_IMAGES }}
+  ## telegram bot
   TGRAM_BOTKEY:         ${{ secrets.TELEGRAM_BOT_KEY }}
   TGRAM_CHATID:         ${{ secrets.TELEGRAM_CHAT_ID }}
   TGRAM_DONEID:         ${{ secrets.TELEGRAM_DONE_ID }}
-  # input status
+  ## input status
   INPUT_CONFIG:         ${{ github.event.inputs.restore_config }}
   INPUT_WIFI5G:         ${{ github.event.inputs.boost_wifi_5g }}
   INPUT_UP_ART:         ${{ github.event.inputs.upload_firmware }}
@@ -77,13 +86,12 @@ env:
   INPUT_UP_WSS:         ${{ github.event.inputs.upload_wenshushu }}
   INPUT_NOTIFY:         ${{ github.event.inputs.telegram_notify }}
   INPUT_KALIVE:         ${{ github.event_name == 'schedule' || github.event.inputs.keepalive_cache == 'true' }}
-  # hardware & repo info
+  ## hardware & repo info
   TARGET_MODEL:         virtual_machines_x64
   TARGET_CHIPS:         x86_64
   TARGET_MEDIA:         8g_ssd
-  CODE_SOURCES:         immortalwrt
   LINUX_KERNEL:         kernel_6.12
-  OUTPUT_FILES:         solidwrt-25.12ss-virtual_machines_x64-8gb_ssd-sysupgrade
+  OUTPUT_FILES:         solidwrt-25.12ss-virtual_machines_x64-8gb_ssd
   TZ: "Asia/Tokyo"
 
 jobs:
@@ -97,66 +105,8 @@ jobs:
       run: |
         echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
 
-    - name: Sync and Wait for Plugin Repo (プラグインリポジトリの同期と待機)
-      run: |
-        LAST_TS=$(date -d $(gh run list -w "$PLUGINS_SYNC" -R "$PLUGINS_REPO" -s success --limit 1 --json updatedAt -q '.[0].updatedAt // "1970-01-01"') +%s)
-        DIFF=$(( ($(date +%s) - LAST_TS) / 3600 ))
-        if [ "$DIFF" -ge 24 ]; then
-          echo "⚠️ 最終同期から ${DIFF}時間経過。同期を開始します..."
-          gh workflow run "$PLUGINS_SYNC" -R "$PLUGINS_REPO" -r "$PLUGINS_HEAD"
-          for i in {1..30}; do
-            sleep 20
-            RUN_ID=$(gh run list -w "$PLUGINS_SYNC" -R "$PLUGINS_REPO" --limit 1 --json databaseId,status -q 'map(select(.status != "completed")) | .[0].databaseId')
-            [[ -n "$RUN_ID" && "$RUN_ID" != "null" ]] && break
-          done
-          [[ -z "$RUN_ID" ]] && echo "❌ Timeout" && exit 1
-          gh run watch "$RUN_ID" -R "$PLUGINS_REPO" --exit-status
-        else
-          echo "✅ 最近同期されました（${DIFF}時間前）。スキップします。"
-        fi
-
     - name: Checkout Repo A (チェックアウト)
       uses: actions/checkout@main
-
-    - name: Check Server Performance (サーバー性能の確認)
-      id: check_env
-      run: |
-        CPU_MODEL=$(cat /proc/cpuinfo | grep -m1 "model name" | awk -F: '{print $2}' | sed 's/^[ \t]*//')
-        FREE_SPACE=$(df --block-size=1G / | awk 'NR==2 {print $4}')
-        echo "⚠️注意⚠️"
-        echo "サーバーのリソースは有限です。プラグインの過剰な選択はCPU高負荷の原因となります。"
-        echo -e "既知のCPUモデル（降顺）: 9V74, 7763，8370C，8272CL，8171M，E5-2673\n"
-        echo "-------------------------CPU 情報---------------------------"
-        echo "CPUの物理数  : $(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)"
-        echo "CPUコア数    : $(nproc)"
-        echo -e "CPUモデル情報: $CPU_MODEL\n"
-        echo "------------------------メモリ情報--------------------------"
-        echo "メモリの詳細:"
-        free -h
-        echo ""
-        echo "---------------------ハードディスク情報---------------------"
-        # 兼容更多磁盘命名方式
-        echo "ディスクデバイス数: $(lsblk -dn -o NAME | grep -E '^sd|^vd|^nvme' | wc -l)"
-        df -hT
-        echo ""
-        echo "------------------サーバー最適化の実行結果------------------"
-        if [[ "$CPU_MODEL" != *"EPYC 7763"* && "$CPU_MODEL" != *"EPYC 9V74"* ]]; then
-          echo "❌ ハードウェア不適合、ジョブを停止します。"
-          gh workflow run "${{ github.workflow }}" --ref "${{ github.ref_name }}"
-          sleep 15
-          gh run cancel ${{ github.run_id }}
-          sleep 10
-          exit 1
-        fi
-
-    - name: Delete Old Workflows (古いワークフローの削除)
-      uses: Mattraks/delete-workflow-runs@main
-      with:
-        token: ${{ env.ACCESS_TOKEN }}
-        repository: ${{ github.repository }}
-        retain_days: 0
-        keep_minimum_runs: 0
-        delete_workflow_pattern: "imwrt 25.12-snapshot kernel 6.12"
 
     - name: Checkout Repo B (Data)
       uses: actions/checkout@main
@@ -165,73 +115,63 @@ jobs:
         token: ${{ env.GITHUB_TOKEN }}
         path: 'private_data'
 
-    - name: Set Variables
+    - name: Delete Old Workflows (古いワークフローの削除)
+      uses: Mattraks/delete-workflow-runs@main
+      with:
+        token: ${{ env.ACCESS_TOKEN }}
+        repository: ${{ env.RUN_REF_REPO }}
+        retain_days: 0
+        keep_minimum_runs: 0
+        delete_workflow_pattern: "imwrt 25.12-snapshot kernel 6.12"
+
+    - name: Check Server Performance (サーバー性能の確認)
+      id: check_env
       run: |
-        find ${{ github.workspace }}/private_data -name "*.sh" -exec chmod +x {} +
-        # free disk space
-        echo "EXPAND_SPACE=$GITHUB_WORKSPACE/private_data/repo/patch/freediskspace.sh" >> $GITHUB_ENV
-        # git repo patch
-        echo "SOURCE_PATCH=$GITHUB_WORKSPACE/private_data/repo/patch/immortalwrt-2512ss-patch.sh" >> $GITHUB_ENV
-        # device files
-        echo "DEVICE_PATCH=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/patch/device_patch.sh" >> $GITHUB_ENV
-        echo "BUILD_CONFIG=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/config/.config" >> $GITHUB_ENV
-        echo "BACKUP_FILES=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/archive/immortalwrt-25.12/" >> $GITHUB_ENV
-        # cmcc color sytle for argon
-        echo "ARGON_COLORS=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/theme/argon_theme.sh" >> $GITHUB_ENV
-        cat $GITHUB_WORKSPACE/private_data/repo/patch/freediskspace.sh
-        
-    - name: Initialization environment  (環境の初期化)
+        ${{ env.CHECK_SERVER }}
+
+    - name: Sync and Wait for Plugin Repo (プラグインリポジトリの同期と待機)
+      run: |
+        ${{ env.PLUGINS_2512 }}
+
+    - name: Initialization Environment  (環境の初期化)
       id: init
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        docker rmi -f $(docker images -q) 2>/dev/null || true
-        [[ -n "${AGENT_TOOLSDIRECTORY}" ]] && sudo rm -rf "${AGENT_TOOLSDIRECTORY}"
-        sudo rm -rf /usr/share/dotnet /usr/local/lib/android 2>/dev/null
-        sudo swapoff -a
-        sudo rm -f /swapfile /mnt/swapfile
-        sudo -E apt-get -y update
-        sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
-        sudo -E apt-get -y install $(curl -fsSL https://ophub.org/ubuntu2404-make-openwrt-depends)
-        sudo -E apt-get -y install dos2unix python3-netifaces libfuse-dev
-        sudo -E systemctl daemon-reload
-        sudo -E apt-get -y autoremove --purge
-        sudo -E apt-get clean
-        sudo sed -i '/NVM_DIR/d;/skel/d' /root/{.bashrc,.profile}
-        sudo rm -rf ~/.dotnet
-        sudo -E timedatectl set-timezone "$TZ"
-        sudo -E ntpdate ntp.ubuntu.com 0.pool.ntp.org || true
-        sudo -E timedatectl set-ntp true
-        date -u
-        timedatectl status || true
-        echo "status=success" >> ${GITHUB_OUTPUT}
-        git config --global url."https://$ACCESS_TOKEN@github.com/0xACE8/".insteadOf "https://github.com/0xACE8/"
-        git config --global core.compression 0
+        ${{ env.INIT_ENV_VAR }} >/dev/null 2>&1
 
     - name: Free Disk Space (ディスク空き容量の確保)
       run: |
-        ${{ env.EXPAND_SPACE }}
-        sudo mkdir -p /build
-        sudo mount /dev/github/runner /build
-        sudo chown -R runner:runner /build
-        sudo ln -s /build $GITHUB_WORKSPACE/openwrt
+        ${{ env.EXPAND_SPACE }} >/dev/null 2>&1
         df -Th
-        echo "status=success" >> ${GITHUB_OUTPUT}
-        ls -al
-        ls $GITHUB_WORKSPACE
-        ls $GITHUB_WORKSPACE/private_data
-        ls $GITHUB_WORKSPACE/openwrt
-   
+
     - name: Clone Source Code (ソースコードのクローン)
       working-directory: ./
       run: |
-        df -hT $PWD
-        git clone --depth 1 --single-branch $GIT_REPO_URL -b $GIT_HEAD_REF openwrt
-        # Remove China Mirrors (中国国内ミラーの削除)
-        ls
-        cd openwrt
-        [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json
-        [ -d "files" ] && rm -rf files
-        # Add annawrt-packages Repo To Feeds ()
-        ${{ env.FEEDS_SOURCE }}
-        ls 
+        ${{ env.CLONE_IM2512 }}
+        ${{ env.FEEDS_OP2512 }}
+
+    - name: Update & Install Feeds (フィードの更新とインストール)
+      working-directory: ./openwrt
+      run: |
+        ${{ env.DEVICE_PATCH }}
+        # rtl88x2bu support
+        git clone -b openwrt-25.12.0-rc4 https://github.com/mirobiala/rtl88x2bu-cl package/kernel/rtl88x2bu-cl
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: Load Custom Configuration (カスタム設定の読み込み)
+      working-directory: ./openwrt
+      id: loadconfig
+      run: |
+        cp -rf ${{ env.BUILD_CONFIG }} .config
+        ${{ env.PATCH_IM2512 }}
+        ${{ env.ARGON_COLORS }}
+
+    - name: Restore Config Archive (設定アーカイブの復元)
+      if: steps.loadconfig.outcome == 'success' && env.INPUT_RESTORE == 'true'
+      working-directory: ./openwrt
+      run: |
+        mv ${{ env.BACKUP_FILES }} files
+        ls files
+        echo "OUTPUT_FILE=$OUTPUT_FILES-configured" >> $GITHUB_ENV
