@@ -56,7 +56,7 @@ env:
   GITHUB_TOKEN:         ${{ secrets.ACCESS_TOKEN }}
   ACCESS_TOKEN:         ${{ secrets.ACCESS_TOKEN }}
   # free disk space
-  EXPAND_SPACE:         ${{ secrets.FREE_DISKS_SPACE }}
+  # EXPAND_SPACE:         ${{ secrets.FREE_DISKS_SPACE }}
   # feeds source & check sha512sum
   FEEDS_SOURCE:         ${{ secrets.ADD_FEEDS_OP2512 }}
   CHECK_SHA512:         ${{ secrets.CHECK_SHA512SUMS }}
@@ -156,7 +156,7 @@ jobs:
         repository: ${{ github.repository }}
         retain_days: 0
         keep_minimum_runs: 0
-        delete_workflow_pattern: "imwrt 25.12ss kernel 6.12"
+        delete_workflow_pattern: "imwrt 25.12-snapshot kernel 6.12"
 
     - name: Checkout Repo B (Data)
       uses: actions/checkout@main
@@ -167,15 +167,18 @@ jobs:
 
     - name: Set Variables
       run: |
+        # free disk space
+        echo "EXPAND_SPACE=$GITHUB_WORKSPACE/private_data/repo/patch/freediskspace.sh" >> $GITHUB_ENV
         # git repo patch
-        echo "SOURCE_PATCH=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/repo/patch/immortalwrt-2512ss-patch.sh" >> $GITHUB_ENV
+        echo "SOURCE_PATCH=$GITHUB_WORKSPACE/private_data/repo/patch/immortalwrt-2512ss-patch.sh" >> $GITHUB_ENV
         # device files
         echo "DEVICE_PATCH=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/patch/device_patch.sh" >> $GITHUB_ENV
         echo "BUILD_CONFIG=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/config/.config" >> $GITHUB_ENV
         echo "BACKUP_FILES=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/archive/immortalwrt-25.12/" >> $GITHUB_ENV
         # cmcc color sytle for argon
         echo "ARGON_COLORS=$GITHUB_WORKSPACE/private_data/devices/virtual_machines_x64/theme/argon_theme.sh" >> $GITHUB_ENV
-
+        cat $GITHUB_WORKSPACE/private_data/repo/patch/freediskspace.sh
+        
     - name: Initialization environment  (環境の初期化)
       id: init
       env:
@@ -217,3 +220,17 @@ jobs:
         ls $GITHUB_WORKSPACE
         ls $GITHUB_WORKSPACE/private_data
         ls $GITHUB_WORKSPACE/openwrt
+   
+    - name: Clone Source Code (ソースコードのクローン)
+      working-directory: ./
+      run: |
+        df -hT $PWD
+        git clone --depth 1 --single-branch $GIT_REPO_URL -b $GIT_HEAD_REF openwrt
+        # Remove China Mirrors (中国国内ミラーの削除)
+        ls
+        cd openwrt
+        [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json
+        [ -d "files" ] && rm -rf files
+        # Add annawrt-packages Repo To Feeds ()
+        ${{ env.FEEDS_SOURCE }}
+        ls 
