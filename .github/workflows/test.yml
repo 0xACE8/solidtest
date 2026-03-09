@@ -55,6 +55,8 @@ env:
   RUN_REF_REPO:         ${{ github.repository }}
   RUNID_NUMBER:         ${{ github.run_id }}
   ## solidwrt core
+  GIT_REPO_URL:         ${{ secrets.IMMORTALWRT_SOURCE_LINK }}
+  GIT_2512_REF:         ${{ secrets.IMMORTALWRT_2512SS_HEAD }}
   PRIVATE_DATA:         ${{ secrets.SOLIDWRT_CORE }}
   ## github ci
   PLUGINS_2512:         ${{ github.workspace }}/${{ secrets.PLUGINS_2512_ACE }}
@@ -149,31 +151,10 @@ jobs:
     - name: Clone Source Code (ソースコードのクローン)
       working-directory: ./
       run: |
-        ${{ env.CLONE_IM2512 }}
+        git clone --depth 1 --single-branch $GIT_REPO_URL -b $GIT_2512_REF openwrt
+        # Remove China Mirrors (中国国内ミラーの削除)
+        cd openwrt
+        [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json
+        [ -d "files" ] && rm -rf files
+        #${{ env.CLONE_IM2512 }}
         ${{ env.FEEDS_OP2512 }}
-
-    - name: Update & Install Feeds (フィードの更新とインストール)
-      working-directory: ./openwrt
-      run: |
-        ${{ env.DEVICE_PATCH }}
-        # rtl88x2bu support
-        git clone -b openwrt-25.12.0-rc4 https://github.com/mirobiala/rtl88x2bu-cl package/kernel/rtl88x2bu-cl
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
-
-    - name: Load Custom Configuration (カスタム設定の読み込み)
-      working-directory: ./openwrt
-      id: loadconfig
-      run: |
-        cp -rf ${{ env.BUILD_CONFIG }} .config
-        ls -al
-        ${{ env.PATCH_IM2512 }}
-        ${{ env.ARGON_COLORS }}
-
-    - name: Restore Config Archive (設定アーカイブの復元)
-      if: steps.loadconfig.outcome == 'success' && env.INPUT_RESTORE == 'true'
-      working-directory: ./openwrt
-      run: |
-        mv ${{ env.BACKUP_FILES }} files
-        ls files
-        echo "OUTPUT_FILE=$OUTPUT_FILES-configured" >> $GITHUB_ENV
