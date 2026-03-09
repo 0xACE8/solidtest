@@ -151,10 +151,10 @@ jobs:
     - name: Clone Source Code (ソースコードのクローン)
       working-directory: ./
       run: |
-        git clone --depth 1 --single-branch $GIT_REPO_URL -b $GIT_2512_REF openwrt
+        #git clone --depth 1 --single-branch $GIT_REPO_URL -b $GIT_2512_REF openwrt
         # Remove China Mirrors (中国国内ミラーの削除)
-        cd openwrt
-        [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json
-        [ -d "files" ] && rm -rf files
-        #${{ env.CLONE_IM2512 }}
+        #cd openwrt
+        #[ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json
+        #[ -d "files" ] && rm -rf files
+        ${{ env.CLONE_IM2512 }}
         ${{ env.FEEDS_OP2512 }}
