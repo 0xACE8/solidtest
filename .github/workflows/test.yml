@@ -57,10 +57,10 @@ env:
   ## solidwrt core
   PRIVATE_DATA:         ${{ secrets.SOLIDWRT_CORE }}
   ## github ci
-  PLUGINS_2512:         ${{ github.workspace }}/${{ secrets.PLUGINS_2512_ACE }}
-  PLUGINS_2410:         ${{ github.workspace }}/${{ secrets.PLUGINS_2410_ACE }}
-  CHECK_SERVER:         ${{ github.workspace }}/${{ secrets.TEST_SERVER_PERF }}
-  INIT_ENV_VAR:         ${{ github.workspace }}/${{ secrets.INIT_ENVIRONMENT }}
+  PLUGINS_2512:         ${{ secrets.PLUGINS_2512_ACE }}
+  PLUGINS_2410:         ${{ secrets.PLUGINS_2410_ACE }}
+  CHECK_SERVER:         ${{ secrets.TEST_SERVER_PERF }}
+  INIT_ENV_VAR:         ${{ secrets.INIT_ENVIRONMENT }}
   EXPAND_SPACE:         ${{ github.workspace }}/${{ secrets.FREE_DISKS_SPACE }}
   CLONE_IM2512:         ${{ github.workspace }}/${{ secrets.CLONE_IM2512_SRC }}
   CLONE_IM2410:         ${{ github.workspace }}/${{ secrets.CLONE_IM2512_SRC }}
