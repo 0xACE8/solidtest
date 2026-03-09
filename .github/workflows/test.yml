@@ -167,6 +167,7 @@ jobs:
 
     - name: Set Variables
       run: |
+        find ${{ github.workspace }}/private_data -name "*.sh" -exec chmod +x {} +
         # free disk space
         echo "EXPAND_SPACE=$GITHUB_WORKSPACE/private_data/repo/patch/freediskspace.sh" >> $GITHUB_ENV
         # git repo patch
