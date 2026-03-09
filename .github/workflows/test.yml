@@ -214,3 +214,6 @@ jobs:
         df -Th
         echo "status=success" >> ${GITHUB_OUTPUT}
         ls -al
+        ls $GITHUB_WORKSPACE
+        ls $GITHUB_WORKSPACE/private_data
+        ls $GITHUB_WORKSPACE/openwrt
