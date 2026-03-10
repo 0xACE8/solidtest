@@ -178,7 +178,7 @@ jobs:
         ${{ env.ARGON_COLORS }}
 
     - name: Restore Config Archive (設定アーカイブの復元)
-      if: steps.loadconfig.outcome == 'success' && env.INPUT_RESTORE == 'true'
+      if: steps.loadconfig.outcome == 'success' && env.INPUT_CONFIG == 'true'
       working-directory: ./openwrt
       run: |
         mv ${{ env.BACKUP_FILES }} files
