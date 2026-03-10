@@ -162,11 +162,11 @@ jobs:
     - name: Update & Install Feeds (フィードの更新とインストール)
       working-directory: ./openwrt
       run: |
-        ${{ env.DEVICE_PATCH }}
         # rtl88x2bu support
         git clone -b openwrt-25.12.0-rc4 https://github.com/mirobiala/rtl88x2bu-cl package/kernel/rtl88x2bu-cl
         ./scripts/feeds update -a
         ./scripts/feeds install -a
+        ${{ env.DEVICE_PATCH }}
 
     - name: Load Custom Configuration (カスタム設定の読み込み)
       working-directory: ./openwrt
