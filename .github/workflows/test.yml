@@ -15,33 +15,29 @@ on:
   workflow_dispatch:
     inputs:
       restore_config:
-        description: 'Restore Configuration. 🇯🇵 設定を復元'
+        description: 'RESTORE_BAKCONF. 🇯🇵 環境設定復元'
         type: boolean
         default: false
       #boost_wifi_5g:
-      #  description: 'Boost Wi-Fi 5G Signal. 🇯🇵 5G信号の増幅'
+      #  description: 'BOOST_WIFI5G_SG. 🇯🇵 ５Ｇ信号増幅'
       #  type: boolean
       #  default: false
       upload_firmware:
-        description: 'Upload FW to Artifact. 🇯🇵 Artifactに保存'
+        description: 'UPLOAD_ARTIFACT. 🇯🇵 成果物の保存'
         type: boolean
         default: false
       upload_release:
-        description: 'Upload FW to Release.. 🇯🇵 Releaseに公開'
+        description: 'UPLOAD_RELEASES. 🇯🇵 リリース公開'
         type: boolean
         default: false
       #upload_wenshushu:
-      #  description: 'Upload FW to WENSHUSHU 🇯🇵 文叔叔に転送'
+      #  description: 'UPLOAD_TO_WENSS. 🇯🇵 文叔叔へ転送'
       #  type: boolean
       #  default: false
       telegram_notify:
-        description: 'Telegram Notification. 🇯🇵 Telegram通知'
+        description: 'TELEGRAM_NOTIFY. 🇯🇵 ＴＧ通知送信'
         type: boolean
         default: true
-      keepalive_cache:
-        description: 'Manual Cache Keepalive 🇯🇵 保活モード'
-        type: boolean
-        default: false
   schedule:
     - cron: '0 2 * * 1'
     - cron: '0 0 1 * *'
@@ -56,28 +52,37 @@ env:
   RUNID_NUMBER:         ${{ github.run_id }}
   ## solidwrt core
   GIT_REPO_URL:         ${{ secrets.IMMORTALWRT_SOURCE_LINK }}
-  GIT_2512_REF:         ${{ secrets.IMMORTALWRT_2512SS_HEAD }}
   PRIVATE_DATA:         ${{ secrets.SOLIDWRT_CORE }}
-  ## github ci
+  ## immortalwrt 25.12
+  GIT_2512_REF:         ${{ secrets.IMMORTALWRT_2512SS_HEAD }}
   PLUGINS_2512:         ${{ github.workspace }}/${{ secrets.PLUGINS_2512_ACE }}
+  PATCH_IM2512:         ${{ github.workspace }}/${{ secrets.SRC_PATCH_IM2512 }}
+  FEEDS_IM2512:         ${{ github.workspace }}/${{ secrets.ADD_FEEDS_IM2512 }}
+  ## immortalwrt 24.10
+  GIT_2410_REF:         ${{ secrets.IMMORTALWRT_2410SS_HEAD }}
   PLUGINS_2410:         ${{ github.workspace }}/${{ secrets.PLUGINS_2410_ACE }}
+  PATCH_IM2410:         ${{ github.workspace }}/${{ secrets.SRC_PATCH_IM2410 }}
+  FEEDS_IM2410:         ${{ github.workspace }}/${{ secrets.ADD_FEEDS_IM2410 }}
+  ## github ci scripts
   CHECK_SERVER:         ${{ github.workspace }}/${{ secrets.TEST_SERVER_PERF }}
   INIT_ENV_VAR:         ${{ github.workspace }}/${{ secrets.INIT_ENVIRONMENT }}
   EXPAND_SPACE:         ${{ github.workspace }}/${{ secrets.FREE_DISKS_SPACE }}
-  CLONE_IM2512:         ${{ github.workspace }}/${{ secrets.CLONE_IM2512_SRC }}
-  CLONE_IM2410:         ${{ github.workspace }}/${{ secrets.CLONE_IM2512_SRC }}
-  PATCH_IM2512:         ${{ github.workspace }}/${{ secrets.SRC_PATCH_IM2512 }}
-  PATCH_IM2410:         ${{ github.workspace }}/${{ secrets.SRC_PATCH_IM2410 }}
-  FEEDS_OP2512:         ${{ github.workspace }}/${{ secrets.ADD_FEEDS_OP2512 }}
-  FEEDS_OP2410:         ${{ github.workspace }}/${{ secrets.ADD_FEEDS_OP2410 }}
+  FIRMWARE_ORG:         ${{ github.workspace }}/${{ secrets.ORGANIZE_FW_FILE }}
+  CALC_RUNTIME:         ${{ github.workspace }}/${{ secrets.CALC_RUNING_TIME }}
+  ## device configure
   DEVICE_PATCH:         ${{ github.workspace }}/${{ secrets.DEVICE_DIFFPATCH }}
   BUILD_CONFIG:         ${{ github.workspace }}/${{ secrets.BUILD_DIFFCONFIG }}
   BACKUP_FILES:         ${{ github.workspace }}/${{ secrets.BACKUP_CONFIGURE }}
   ARGON_COLORS:         ${{ github.workspace }}/${{ secrets.ARGON_THEMECOLOR }}
-  CHECK_SHA512:         ${{ github.workspace }}/${{ secrets.CHECK_SHA512SUMS }}
-  REPACK_IMAGE:         ${{ github.workspace }}/${{ secrets.REPACKAGE_IMAGES }}
+  ## upload firmware
+  UPTO_RELEASE:         ${{ github.workspace }}/${{ secrets.UPLOADTO_RELEASE }}
+  UP_WENSHUSHU:         ${{ github.workspace }}/${{ secrets.UPLOAD_WENSHUSHU }}
+  ## cache repo
+  CACHE_REPOSI:         ${{ github.workspace }}/${{ secrets.CACHE_REPOSITORY }}
+  UPLOAD_CACHE:         ${{ github.workspace }}/${{ secrets.UP_COMPILE_CACHE }}
+  DWLOAD_CACHE:         ${{ github.workspace }}/${{ secrets.DW_STORAGE_CACHE }}
   ## telegram bot
-  TGRAM_BOTKEY:         ${{ secrets.TELEGRAM_BOT_KEY }}
+  TGRAM_NOTIFY:         ${{ github.workspace }}/${{ secrets.PUSH_TO_TELEGRAM }}
   TGRAM_CHATID:         ${{ secrets.TELEGRAM_CHAT_ID }}
   TGRAM_DONEID:         ${{ secrets.TELEGRAM_DONE_ID }}
   ## input status
@@ -87,7 +92,6 @@ env:
   INPUT_UP_REL:         ${{ github.event.inputs.upload_release }}
   INPUT_UP_WSS:         ${{ github.event.inputs.upload_wenshushu }}
   INPUT_NOTIFY:         ${{ github.event.inputs.telegram_notify }}
-  INPUT_KALIVE:         ${{ github.event_name == 'schedule' || github.event.inputs.keepalive_cache == 'true' }}
   ## hardware & repo info
   TARGET_MODEL:         virtual_machines_x64
   TARGET_CHIPS:         x86_64
@@ -118,7 +122,7 @@ jobs:
         path: 'private_data'
 
     - name: Delete Old Workflows (古いワークフローの削除)
-      uses: Mattraks/delete-workflow-runs@main
+      uses: Mattraks/delete-workflow-runs@v2.1.0
       with:
         token: ${{ env.ACCESS_TOKEN }}
         repository: ${{ env.RUN_REF_REPO }}
@@ -127,7 +131,6 @@ jobs:
         delete_workflow_pattern: "imwrt 25.12-snapshot kernel 6.12"
 
     - name: Check Server Performance (サーバー性能の確認)
-      id: check_env
       run: |
         find ${{ github.workspace }}/private_data -name "*.sh" -exec chmod +x {} +
         ${{ env.CHECK_SERVER }}
@@ -148,6 +151,13 @@ jobs:
         ${{ env.EXPAND_SPACE }} >/dev/null 2>&1
         df -Th
 
+    - name: Restore ccache from Private Repo
+      env:
+        GH_TOKEN: ${{ env.ACCESS_TOKEN }}
+        CACHE_TAGNAM: "cache-${{ env.OUTPUT_FILES }}"
+      run: |
+        ${{ env.DWLOAD_CACHE }} >/dev/null 2>&1
+
     - name: Clone Source Code (ソースコードのクローン)
       working-directory: ./
       run: |
@@ -157,7 +167,7 @@ jobs:
         cd openwrt
         [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json
         [ -d "files" ] && rm -rf files
-        ${{ env.FEEDS_OP2512 }}
+        ${{ env.FEEDS_IM2512 }}
 
     - name: Update & Install Feeds (フィードの更新とインストール)
       working-directory: ./openwrt
@@ -165,6 +175,7 @@ jobs:
         # rtl88x2bu support
         git clone -b openwrt-25.12.0-rc4 https://github.com/mirobiala/rtl88x2bu-cl package/kernel/rtl88x2bu-cl
         ./scripts/feeds update -a
+        rm -rf feeds/packages/lang/golang && git clone https://github.com/sbwml/packages_lang_golang -b 26.x feeds/packages/lang/golang
         ./scripts/feeds install -a
         ${{ env.DEVICE_PATCH }}
 
@@ -173,7 +184,6 @@ jobs:
       id: loadconfig
       run: |
         cp -rf ${{ env.BUILD_CONFIG }} .config
-        ls -al
         ${{ env.PATCH_IM2512 }}
         ${{ env.ARGON_COLORS }}
 
@@ -181,13 +191,11 @@ jobs:
       if: steps.loadconfig.outcome == 'success' && env.INPUT_CONFIG == 'true'
       working-directory: ./openwrt
       run: |
-        mv ${{ env.BACKUP_FILES }} ./files
-        ls files
-        echo "OUTPUT_FILE=$OUTPUT_FILES-configured" >> $GITHUB_ENV
-
+        mv ${{ env.BACKUP_FILES }} files
+        echo "OUTPUT_FILES=$OUTPUT_FILES-configured" >> $GITHUB_ENV
 
     - name: Download Packages (パッケージのダウンロード)
-      if: steps.loadconfig.outcome == 'success' && !cancelled()
+      if: steps.loadconfig.outcome == 'success'
       working-directory: ./openwrt
       id: package
       run: |
@@ -197,7 +205,6 @@ jobs:
         find dl -size -1024c -exec rm -f {} \;
 
     - name: Compile Firmware (ファームウェアのコンパイル)
-      if: env.INPUT_KALIVE != 'true'
       working-directory: ./openwrt
       id: compile
       env:
@@ -210,7 +217,61 @@ jobs:
         make -j$(nproc) || make -j1 V=s
         echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
 
-    - name: Update Variables (変数の更新)
+    - name: Organize Files (ファイルの整理)
       if: steps.compile.outcome == 'success'
+      id: organize
       run: |
-        echo "OUTPUT_FILE=${OUTPUT_FILE}_${FILE_DATE}" >> $GITHUB_ENV
+        cd openwrt/bin/targets/*/*
+        ${{ env.FIRMWARE_ORG }}
+
+    - name: Upload to Artifacts (Artifactに保存)
+      if: steps.organize.outcome == 'success' && env.INPUT_UP_ART == 'true'
+      uses: actions/upload-artifact@main
+      with:
+        name: ${{ env.OUTPUT_FILES }}
+        path: ${{ env.FIRMWARE }}
+
+    - name: Upload to Release (Releaseに公開)
+      if: steps.compile.outcome == 'success' && env.INPUT_UP_REL == 'true'
+      uses: softprops/action-gh-release@master
+      with:
+        token: ${{ env.ACCESS_TOKEN }}
+        tag_name: ${{ env.TAG_NAME }}
+        name: ${{ env.TARGET_CHIPS }}_${{ env.TARGET_MODEL }}_${{ env.TARGET_MEDIA }}_${{ env.LINUX_KERNEL }}_${{ env.FILE_DATE }}
+        files: ${{ env.FIRMWARE }}/*
+        body: |
+          ${{ env.UPTO_RELEASE }}
+
+    - name: Upload to WenShuShu (ウェンおじさんにアップロードする)
+      if: steps.compile.outcome == 'success' && steps.organize.outcome == 'success' && env.INPUT_UP_WSS == 'true'
+      working-directory: ./openwrt
+      run: |
+        ${{ env.UP_WENSHUSHU }}
+
+    - name: Calculate Duration (実行時間の計算)
+      if: always() && env.INPUT_NOTIFY == 'true'
+      run: |
+        ${{ env.CALC_RUNTIME }}
+
+    - name: Final Report & TG Notify (総合ステータス通知)
+      if: always() && env.INPUT_NOTIFY == 'true'
+      run: |
+        ${{ env.TGRAM_NOTIFY }}
+
+    - name: Archive and Upload CACHE (自動生成された究極のビルドキャッシュ)
+      if: success() && !cancelled()
+      working-directory: ./openwrt
+      env:
+        GH_TOKEN: ${{ env.ACCESS_TOKEN }}
+      run: |
+        ${{ env.UPLOAD_CACHE }}
+
+    - name: Delete Old Releases (古いリリースの削除)
+      if: steps.compile.outcome == 'success' && env.INPUT_UP_REL == 'true'
+      uses: dev-drprasad/delete-older-releases@master
+      with:
+        keep_latest: 2
+        delete_tags: true
+        delete_tag_pattern: "${{ env.TARGET_MODEL }}_${{ env.GIT_2512_REF }}" 
+
+
