@@ -258,7 +258,7 @@ jobs:
     - name: Calculate Duration (実行時間の計算)
       if: always() && env.INPUT_NOTIFY == 'true' && env.INPUT_KALIVE != 'true'
       run: |
-        ${{ env.CALC_RUNTIME }}
+        ${{ env.CALC_RUNTIME }} "${{ env.START_TIME }}"
 
     - name: Final Report & TG Notify (総合ステータス通知)
       if: always() && env.INPUT_NOTIFY == 'true' && env.INPUT_KALIVE != 'true'
@@ -273,7 +273,7 @@ jobs:
       env:
         GH_TOKEN: ${{ env.ACCESS_TOKEN }}
       run: |
-        ${{ env.UPLOAD_CACHE }}
+        ${{ env.UPLOAD_CACHE }} "${{ env.CACHE_TAG_ID }}" "${{ env.CACHE_REPOSI }}"
 
     - name: Delete Old Releases (古いリリースの削除)
       if: steps.compile.outcome == 'success' && env.INPUT_UP_REL == 'true'
@@ -282,5 +282,3 @@ jobs:
         keep_latest: 2
         delete_tags: true
         delete_tag_pattern: "${{ env.TARGET_MODEL }}_${{ env.GIT_2512_REF }}" 
-
-
