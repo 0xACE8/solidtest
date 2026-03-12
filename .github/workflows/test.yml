@@ -93,7 +93,6 @@ env:
   INPUT_UP_WSS:         ${{ github.event.inputs.upload_wenshushu }}
   INPUT_NOTIFY:         ${{ github.event.inputs.telegram_notify }}
   INPUT_KALIVE:         ${{ github.event_name == 'schedule' || github.event.inputs.keepalive_cache == 'true' }}
-  COMP_OUTCOME:         ${{ steps.compile.outcome }}
   ## hardware & repo info
   TARGET_MODEL:         virtual_machines_x64
   TARGET_CHIPS:         x86_64
@@ -191,7 +190,7 @@ jobs:
         ${{ env.ARGON_COLORS }}
 
     - name: Restore Config Archive (設定アーカイブの復元)
-      if: steps.loadconfig.outcome == 'success' && env.INPUT_RESTORE == 'true'
+      if: steps.loadconfig.outcome == 'success' && env.INPUT_CONFIG == 'true'
       working-directory: ./openwrt
       run: |
         mv ${{ env.BACKUP_FILES }} files
@@ -263,6 +262,8 @@ jobs:
 
     - name: Final Report & TG Notify (総合ステータス通知)
       if: always() && env.INPUT_NOTIFY == 'true' && env.INPUT_KALIVE != 'true'
+      env:
+        COMP_OUTCOME: ${{ steps.compile.outcome }}
       run: |
         ${{ env.TGRAM_NOTIFY }}
 
@@ -280,6 +281,6 @@ jobs:
       with:
         keep_latest: 2
         delete_tags: true
-        delete_tag_pattern: "${{ env.TARGET_MODEL }}_${{ env.GIT_HEAD_REF }}" 
+        delete_tag_pattern: "${{ env.TARGET_MODEL }}_${{ env.GIT_2512_REF }}" 
 
 
