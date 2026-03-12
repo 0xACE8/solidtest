@@ -92,6 +92,8 @@ env:
   INPUT_UP_REL:         ${{ github.event.inputs.upload_release }}
   INPUT_UP_WSS:         ${{ github.event.inputs.upload_wenshushu }}
   INPUT_NOTIFY:         ${{ github.event.inputs.telegram_notify }}
+  INPUT_KALIVE:         ${{ github.event_name == 'schedule' || github.event.inputs.keepalive_cache == 'true' }}
+  COMP_OUTCOME:         ${{ steps.compile.outcome }}
   ## hardware & repo info
   TARGET_MODEL:         virtual_machines_x64
   TARGET_CHIPS:         x86_64
@@ -131,6 +133,7 @@ jobs:
         delete_workflow_pattern: "imwrt 25.12-snapshot kernel 6.12"
 
     - name: Check Server Performance (サーバー性能の確認)
+      id: check_env
       run: |
         find ${{ github.workspace }}/private_data -name "*.sh" -exec chmod +x {} +
         ${{ env.CHECK_SERVER }}
@@ -151,13 +154,6 @@ jobs:
         ${{ env.EXPAND_SPACE }} >/dev/null 2>&1
         df -Th
 
-    - name: Restore ccache from Private Repo
-      env:
-        GH_TOKEN: ${{ env.ACCESS_TOKEN }}
-        CACHE_TAGNAM: "cache-${{ env.OUTPUT_FILES }}"
-      run: |
-        ${{ env.DWLOAD_CACHE }} >/dev/null 2>&1
-
     - name: Clone Source Code (ソースコードのクローン)
       working-directory: ./
       run: |
@@ -168,6 +164,13 @@ jobs:
         [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json
         [ -d "files" ] && rm -rf files
         ${{ env.FEEDS_IM2512 }}
+
+    - name: Restore ccache from Private Repo
+      env:
+        GH_TOKEN: ${{ env.ACCESS_TOKEN }}
+        CACHE_TAG_ID: "cache-${{ env.OUTPUT_FILES }}"
+      run: |
+        ${{ env.DWLOAD_CACHE }} >/dev/null 2>&1
 
     - name: Update & Install Feeds (フィードの更新とインストール)
       working-directory: ./openwrt
@@ -188,14 +191,14 @@ jobs:
         ${{ env.ARGON_COLORS }}
 
     - name: Restore Config Archive (設定アーカイブの復元)
-      if: steps.loadconfig.outcome == 'success' && env.INPUT_CONFIG == 'true'
+      if: steps.loadconfig.outcome == 'success' && env.INPUT_RESTORE == 'true'
       working-directory: ./openwrt
       run: |
         mv ${{ env.BACKUP_FILES }} files
         echo "OUTPUT_FILES=$OUTPUT_FILES-configured" >> $GITHUB_ENV
 
     - name: Download Packages (パッケージのダウンロード)
-      if: steps.loadconfig.outcome == 'success'
+      if: steps.loadconfig.outcome == 'success' && !cancelled()
       working-directory: ./openwrt
       id: package
       run: |
@@ -205,6 +208,7 @@ jobs:
         find dl -size -1024c -exec rm -f {} \;
 
     - name: Compile Firmware (ファームウェアのコンパイル)
+      if: env.INPUT_KALIVE != 'true'
       working-directory: ./openwrt
       id: compile
       env:
@@ -223,6 +227,10 @@ jobs:
       run: |
         cd openwrt/bin/targets/*/*
         ${{ env.FIRMWARE_ORG }}
+        #echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        #echo "DOWNLOAD=${{ env.OUTPUT_FILES }}.img.gz" >> $GITHUB_ENV
+        #echo "TAG_NAME=${{ env.FILE_DATE }}_${{ env.TARGET_CHIP }}_${{ env.DEVICE_NAME }}_${{ env.TARGET_DISK }}" >> $GITHUB_ENV
+        #echo "TGRAM_CHATID=${{ env.TGRAM_DONEID }}" >> $GITHUB_ENV
 
     - name: Upload to Artifacts (Artifactに保存)
       if: steps.organize.outcome == 'success' && env.INPUT_UP_ART == 'true'
@@ -249,12 +257,12 @@ jobs:
         ${{ env.UP_WENSHUSHU }}
 
     - name: Calculate Duration (実行時間の計算)
-      if: always() && env.INPUT_NOTIFY == 'true'
+      if: always() && env.INPUT_NOTIFY == 'true' && env.INPUT_KALIVE != 'true'
       run: |
         ${{ env.CALC_RUNTIME }}
 
     - name: Final Report & TG Notify (総合ステータス通知)
-      if: always() && env.INPUT_NOTIFY == 'true'
+      if: always() && env.INPUT_NOTIFY == 'true' && env.INPUT_KALIVE != 'true'
       run: |
         ${{ env.TGRAM_NOTIFY }}
 
@@ -272,6 +280,6 @@ jobs:
       with:
         keep_latest: 2
         delete_tags: true
-        delete_tag_pattern: "${{ env.TARGET_MODEL }}_${{ env.GIT_2512_REF }}" 
+        delete_tag_pattern: "${{ env.TARGET_MODEL }}_${{ env.GIT_HEAD_REF }}" 
 
 
