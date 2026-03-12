@@ -163,17 +163,18 @@ jobs:
         [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json
         [ -d "files" ] && rm -rf files
         ${{ env.FEEDS_IM2512 }}
+        echo "CACHE_TAG_ID=cache-${OUTPUT_FILES}" >> $GITHUB_ENV
 
     - name: Restore ccache from Private Repo
       env:
         GH_TOKEN: ${{ env.ACCESS_TOKEN }}
-        CACHE_TAG_ID: "cache-${{ env.OUTPUT_FILES }}"
       run: |
         ${{ env.DWLOAD_CACHE }} >/dev/null 2>&1
 
     - name: Update & Install Feeds (フィードの更新とインストール)
       working-directory: ./openwrt
       run: |
+        echo "$CACHE_TAG_ID"
         # rtl88x2bu support
         git clone -b openwrt-25.12.0-rc4 https://github.com/mirobiala/rtl88x2bu-cl package/kernel/rtl88x2bu-cl
         ./scripts/feeds update -a
