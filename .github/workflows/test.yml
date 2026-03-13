@@ -66,7 +66,7 @@ env:
   ## github ci scripts
   CHECK_SERVER:         ${{ github.workspace }}/${{ secrets.TEST_SERVER_PERF }}
   INIT_ENV_VAR:         ${{ github.workspace }}/${{ secrets.INIT_ENVIRONMENT }}
-  REMOV_CN_SRC:         ${{ secrets.REMOVE_CN_SOURCE }}
+  REMOV_CN_SRC:         ${{ github.workspace }}${{ secrets.REMOVE_CN_SOURCE }}
   EXPAND_SPACE:         ${{ github.workspace }}/${{ secrets.FREE_DISKS_SPACE }}
   FIRMWARE_ORG:         ${{ github.workspace }}/${{ secrets.ORGANIZE_FW_FILE }}
   CALC_RUNTIME:         ${{ github.workspace }}/${{ secrets.CALC_RUNING_TIME }}
@@ -80,7 +80,7 @@ env:
   UPTO_RELEASE:         ${{ github.workspace }}/${{ secrets.UPLOADTO_RELEASE }}
   UP_WENSHUSHU:         ${{ github.workspace }}/${{ secrets.UPLOAD_WENSHUSHU }}
   ## cache repo
-  CACHE_REPOSI:         ${{ github.workspace }}/${{ secrets.CACHE_REPOSITORY }}
+  CACHE_REPOSI:         ${{ secrets.CACHE_REPOSITORY }}
   UPLOAD_CACHE:         ${{ github.workspace }}/${{ secrets.UP_COMPILE_CACHE }}
   DWLOAD_CACHE:         ${{ github.workspace }}/${{ secrets.DW_STORAGE_CACHE }}
   ## telegram bot
