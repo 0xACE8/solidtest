@@ -17,7 +17,7 @@ on:
       restore_config:
         description: 'RESTORE_BAKCONF. 🇯🇵 環境設定復元'
         type: boolean
-        default: false
+        default: true
       #boost_wifi_5g:
       #  description: 'BOOST_WIFI5G_SG. 🇯🇵 ５Ｇ信号増幅'
       #  type: boolean
@@ -29,7 +29,7 @@ on:
       upload_release:
         description: 'UPLOAD_RELEASES. 🇯🇵 リリース公開'
         type: boolean
-        default: false
+        default: true
       #upload_wenshushu:
       #  description: 'UPLOAD_TO_WENSS. 🇯🇵 文叔叔へ転送'
       #  type: boolean
@@ -38,9 +38,9 @@ on:
         description: 'TELEGRAM_NOTIFY. 🇯🇵 ＴＧ通知送信'
         type: boolean
         default: true
-  schedule:
-    - cron: '0 2 * * 1'
-    - cron: '0 0 1 * *'
+#  schedule:
+#    - cron: '0 2 * * 1'
+#    - cron: '0 0 1 * *'
     
 env:
   ## github token
@@ -66,6 +66,7 @@ env:
   ## github ci scripts
   CHECK_SERVER:         ${{ github.workspace }}/${{ secrets.TEST_SERVER_PERF }}
   INIT_ENV_VAR:         ${{ github.workspace }}/${{ secrets.INIT_ENVIRONMENT }}
+  REMOV_CN_SRC:         ${{ secrets.REMOVE_CN_SOURCE }}
   EXPAND_SPACE:         ${{ github.workspace }}/${{ secrets.FREE_DISKS_SPACE }}
   FIRMWARE_ORG:         ${{ github.workspace }}/${{ secrets.ORGANIZE_FW_FILE }}
   CALC_RUNTIME:         ${{ github.workspace }}/${{ secrets.CALC_RUNING_TIME }}
@@ -74,6 +75,7 @@ env:
   BUILD_CONFIG:         ${{ github.workspace }}/${{ secrets.BUILD_DIFFCONFIG }}
   BACKUP_FILES:         ${{ github.workspace }}/${{ secrets.BACKUP_CONFIGURE }}
   ARGON_COLORS:         ${{ github.workspace }}/${{ secrets.ARGON_THEMECOLOR }}
+  NEW_HW_SUPOT:         ${{ github.workspace }}/${{ secrets.HARDWARE_SUPPORT }}
   ## upload firmware
   UPTO_RELEASE:         ${{ github.workspace }}/${{ secrets.UPLOADTO_RELEASE }}
   UP_WENSHUSHU:         ${{ github.workspace }}/${{ secrets.UPLOAD_WENSHUSHU }}
@@ -98,7 +100,7 @@ env:
   TARGET_CHIPS:         x86_64
   TARGET_MEDIA:         8g_ssd
   LINUX_KERNEL:         kernel_6.12
-  OUTPUT_FILES:         solidwrt-25.12ss-virtual_machines_x64-8gb_ssd
+  OUTPUT_FILES:         solidwrt-25.12-ss-virtual_machines_x64-8gb_ssd
   TZ: "Asia/Tokyo"
 
 jobs:
@@ -112,10 +114,10 @@ jobs:
       run: |
         echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
 
-    - name: Checkout Repo A (チェックアウト)
+    - name: Checkout Repo A (チェックアウト リポジトリ)
       uses: actions/checkout@main
 
-    - name: Checkout Repo B (Data)
+    - name: Checkout Repo B (チェックアウト リポジトリ データ)
       uses: actions/checkout@main
       with:
         repository: ${{ env.PRIVATE_DATA }}
@@ -158,11 +160,11 @@ jobs:
       run: |
         df -hT /build
         git clone --depth 1 --single-branch $GIT_REPO_URL -b $GIT_2512_REF openwrt
-        # Remove China Mirrors (中国国内ミラーの削除)
-        cd openwrt
-        [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json
-        [ -d "files" ] && rm -rf files
+        # Remove China Mirrors (中国ソースの削除)
+        ${{ env.REMOV_CN_SRC }}
+        # add feeds repo
         ${{ env.FEEDS_IM2512 }}
+        # add new env
         echo "CACHE_TAG_ID=cache-${OUTPUT_FILES}" >> $GITHUB_ENV
 
     - name: Restore ccache from Private Repo
@@ -174,11 +176,12 @@ jobs:
     - name: Update & Install Feeds (フィードの更新とインストール)
       working-directory: ./openwrt
       run: |
-        # rtl88x2bu support
-        git clone -b openwrt-25.12.0-rc4 https://github.com/mirobiala/rtl88x2bu-cl package/kernel/rtl88x2bu-cl
+        # add hardware driver
+        ${{ env.NEW_HW_SUPOT }}
         ./scripts/feeds update -a
         rm -rf feeds/packages/lang/golang && git clone https://github.com/sbwml/packages_lang_golang -b 26.x feeds/packages/lang/golang
         ./scripts/feeds install -a
+        # device patch
         ${{ env.DEVICE_PATCH }}
 
     - name: Load Custom Configuration (カスタム設定の読み込み)
@@ -186,7 +189,9 @@ jobs:
       id: loadconfig
       run: |
         cp -rf ${{ env.BUILD_CONFIG }} .config
+        # immortalwrt patch
         ${{ env.PATCH_IM2512 }}
+        # change argon style
         ${{ env.ARGON_COLORS }}
 
     - name: Restore Config Archive (設定アーカイブの復元)
@@ -226,10 +231,6 @@ jobs:
       run: |
         cd openwrt/bin/targets/*/*
         ${{ env.FIRMWARE_ORG }}
-        #echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        #echo "DOWNLOAD=${{ env.OUTPUT_FILES }}.img.gz" >> $GITHUB_ENV
-        #echo "TAG_NAME=${{ env.FILE_DATE }}_${{ env.TARGET_CHIP }}_${{ env.DEVICE_NAME }}_${{ env.TARGET_DISK }}" >> $GITHUB_ENV
-        #echo "TGRAM_CHATID=${{ env.TGRAM_DONEID }}" >> $GITHUB_ENV
 
     - name: Upload to Artifacts (Artifactに保存)
       if: steps.organize.outcome == 'success' && env.INPUT_UP_ART == 'true'
@@ -282,3 +283,4 @@ jobs:
         keep_latest: 2
         delete_tags: true
         delete_tag_pattern: "${{ env.TARGET_MODEL }}_${{ env.GIT_2512_REF }}" 
+
