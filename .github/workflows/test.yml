@@ -181,6 +181,7 @@ jobs:
         # add hardware driver
         ${{ env.NEW_HW_SUPOT }}
         ./scripts/feeds update -a
+        rm -rf feeds/packages/lang/rust && git clone https://github.com/0xACE8/packages_lang_rust feeds/packages/lang/rust
         rm -rf feeds/packages/lang/golang && git clone https://github.com/sbwml/packages_lang_golang -b 26.x feeds/packages/lang/golang
         ./scripts/feeds install -a
         # device patch
@@ -286,4 +287,3 @@ jobs:
         keep_latest: 2
         delete_tags: true
         delete_tag_pattern: "${{ env.TARGET_MODEL }}_${{ env.GIT_2512_REF }}" 
-
