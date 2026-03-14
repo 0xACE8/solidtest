@@ -169,10 +169,16 @@ jobs:
         echo "CACHE_TAG_ID=cache-${OUTPUT_FILES}" >> $GITHUB_ENV
 
     - name: Restore ccache from Private Repo
+      working-directory: ./openwrt
       env:
         GH_TOKEN: ${{ env.ACCESS_TOKEN }}
       run: |
-        ${{ env.DWLOAD_CACHE }}
+        ${{ env.DWLOAD_CACHE }} >/dev/null 2>&1
+        cat <<EOF >> release_body.txt
+        ${{ secrets.UPLOADTO_RELEASE }}
+        EOF
+        cat release_body.txt
+        exit 1
 
     - name: Update & Install Feeds (フィードの更新とインストール)
       working-directory: ./openwrt
@@ -233,7 +239,7 @@ jobs:
         cd ${{ github.workspace }}/openwrt/bin/targets/*/*
         ${{ env.FIRMWARE_ORG }}
         cat <<'EOF' >> ${{ github.workspace }}/release_body.txt
-        ${{ github.workspace }}/${{ secrets.UPLOADTO_RELEASE }}
+        ${{ secrets.UPLOADTO_RELEASE }}
         EOF
 
     - name: Upload to Artifacts (Artifactに保存)
