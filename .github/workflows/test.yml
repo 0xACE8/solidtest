@@ -98,7 +98,7 @@ env:
   ## hardware & repo info
   TARGET_MODEL:         virtual_machines_x64
   TARGET_CHIPS:         x86_64
-  TARGET_MEDIA:         8g_ssd
+  TARGET_MEDIA:         4g_ssd
   LINUX_KERNEL:         kernel_6.12
   OUTPUT_FILES:         solidwrt-25.12-ss-virtual_machines_x64-8gb_ssd
   TZ: "Asia/Tokyo"
@@ -178,7 +178,6 @@ jobs:
     - name: Update & Install Feeds (フィードの更新とインストール)
       working-directory: ./openwrt
       run: |
-        sed -i '/+kmod-nf-ipt6/d' package/kernel/linux/modules/netfilter.mk
         # add hardware driver
         ${{ env.NEW_HW_SUPOT }}
         ./scripts/feeds update -a
