@@ -173,13 +173,11 @@ jobs:
       env:
         GH_TOKEN: ${{ env.ACCESS_TOKEN }}
       run: |
-        ls
+        ls -al
         ${{ env.DWLOAD_CACHE }} >/dev/null 2>&1
         echo "1"
-        ls
-        cat <<EOF >> release_body.txt
+        ls -al
         ${{ secrets.UPLOADTO_RELEASE }}
-        EOF
         echo "2"
         cat release_body.txt
         exit 1
