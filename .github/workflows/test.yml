@@ -172,7 +172,7 @@ jobs:
       env:
         GH_TOKEN: ${{ env.ACCESS_TOKEN }}
       run: |
-        ${{ env.DWLOAD_CACHE }} >/dev/null 2>&1
+        ${{ env.DWLOAD_CACHE }}
 
     - name: Update & Install Feeds (フィードの更新とインストール)
       working-directory: ./openwrt
@@ -232,6 +232,9 @@ jobs:
       run: |
         cd ${{ github.workspace }}/openwrt/bin/targets/*/*
         ${{ env.FIRMWARE_ORG }}
+        cat <<'EOF' >> ${{ github.workspace }}/release_body.txt
+        ${{ github.workspace }}/${{ secrets.UPLOADTO_RELEASE }}
+        EOF
 
     - name: Upload to Artifacts (Artifactに保存)
       if: steps.organize.outcome == 'success' && env.INPUT_UP_ART == 'true'
@@ -239,11 +242,6 @@ jobs:
       with:
         name: ${{ env.OUTPUT_FILES }}
         path: ${{ env.FIRMWARE }}
-
-    - name: 生成 Release 内容文件
-      if: steps.compile.outcome == 'success' && env.INPUT_UP_REL == 'true'
-      run: |
-        ${{ env.UPTO_RELEASE }} > release_body.txt
 
     - name: Upload to Release (Releaseに公開)
       if: steps.compile.outcome == 'success' && env.INPUT_UP_REL == 'true'
@@ -253,7 +251,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         name: ${{ env.TARGET_CHIPS }}_${{ env.TARGET_MODEL }}_${{ env.TARGET_MEDIA }}_${{ env.LINUX_KERNEL }}_${{ env.FILE_DATE }}
         files: ${{ env.FIRMWARE }}/*
-        body_path: release_body.txt
+        body_path: ${{ github.workspace }}/release_body.txt
 
     - name: Upload to WenShuShu (ウェンおじさんにアップロードする)
       if: steps.compile.outcome == 'success' && steps.organize.outcome == 'success' && env.INPUT_UP_WSS == 'true'
