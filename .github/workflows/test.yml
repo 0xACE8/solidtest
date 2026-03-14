@@ -44,7 +44,7 @@ on:
     
 env:
   ## github token
-  GH_TOKEN:             ${{ secrets.ACCESS_TOKEN }}
+  GITHUB_TOKEN:         ${{ secrets.ACCESS_TOKEN }}
   ACCESS_TOKEN:         ${{ secrets.ACCESS_TOKEN }}
   RUN_WORKFLOW:         ${{ github.workflow }}
   RUN_REF_NAME:         ${{ github.ref_name }}
