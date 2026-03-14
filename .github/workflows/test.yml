@@ -160,6 +160,7 @@ jobs:
       run: |
         df -hT /build
         git clone --depth 1 --single-branch $GIT_REPO_URL -b $GIT_2512_REF openwrt
+        
         # Remove China Mirrors (中国ソースの削除)
         ${{ env.REMOV_CN_SRC }}
         # add feeds repo
@@ -229,7 +230,7 @@ jobs:
       if: steps.compile.outcome == 'success'
       id: organize
       run: |
-        cd openwrt/bin/targets/*/*
+        cd ${{ github.workspace }}/openwrt/bin/targets/*/*
         ${{ env.FIRMWARE_ORG }}
 
     - name: Upload to Artifacts (Artifactに保存)
@@ -239,6 +240,11 @@ jobs:
         name: ${{ env.OUTPUT_FILES }}
         path: ${{ env.FIRMWARE }}
 
+    - name: 生成 Release 内容文件
+      if: steps.compile.outcome == 'success' && env.INPUT_UP_REL == 'true'
+      run: |
+        ${{ env.UPTO_RELEASE }} > release_body.txt
+
     - name: Upload to Release (Releaseに公開)
       if: steps.compile.outcome == 'success' && env.INPUT_UP_REL == 'true'
       uses: softprops/action-gh-release@master
@@ -247,8 +253,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         name: ${{ env.TARGET_CHIPS }}_${{ env.TARGET_MODEL }}_${{ env.TARGET_MEDIA }}_${{ env.LINUX_KERNEL }}_${{ env.FILE_DATE }}
         files: ${{ env.FIRMWARE }}/*
-        body: |
-          ${{ env.UPTO_RELEASE }}
+        body_path: release_body.txt
 
     - name: Upload to WenShuShu (ウェンおじさんにアップロードする)
       if: steps.compile.outcome == 'success' && steps.organize.outcome == 'success' && env.INPUT_UP_WSS == 'true'
