@@ -235,7 +235,8 @@ jobs:
         cd ${{ github.workspace }}/openwrt/bin/targets/*/*
         ${{ env.FIRMWARE_ORG }}
         # generate release_body.txt
-        ${{ env.UPTO_RELEASE }}
+        cd ${{ github.workspace }}
+        ${{ env.UPTO_RELEASE }}/openwrt
 
     - name: Upload to Artifacts (Artifactに保存)
       if: steps.organize.outcome == 'success' && env.INPUT_UP_ART == 'true'
@@ -252,7 +253,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         name: ${{ env.TARGET_CHIPS }}_${{ env.TARGET_MODEL }}_${{ env.TARGET_MEDIA }}_${{ env.LINUX_KERNEL }}_${{ env.FILE_DATE }}
         files: ${{ env.FIRMWARE }}/*
-        body_path: ${{ github.workspace }}/release_body.txt
+        body_path: ${{ github.workspace }}/openwrt/release_body.txt
 
     - name: Upload to WenShuShu (ウェンおじさんにアップロードする)
       if: steps.compile.outcome == 'success' && steps.organize.outcome == 'success' && env.INPUT_UP_WSS == 'true'
